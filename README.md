@@ -104,7 +104,7 @@ ctx.layout.panels.setRightbar(px)   // panels = 构造 LayoutController 时传�
 
 | 方向 | 事件名 | 载荷 |
 |:--|:--|:--|
-| 外壳 → 内容 | `dsh:sidebar-right:open` | `{ path, line, sessionId }` |
+| 外壳 → 内容 | `dsh:sidebar-right:open` | `{ path, line, sessionId }`——`path` **一律绝对路径**（见下） |
 | 外壳 → 内容 | `dsh:sidebar-right:theme` | `{ dark }` |
 | 内容 → 外壳 | `dsh:sidebar-right:request` | `{ action }` |
 | 内容 → 外壳 | `dsh:sidebar-right:present` | `{ headless }` |
@@ -117,6 +117,14 @@ chat 点文件链接
   → window 事件 'dsh:sidebar-right:open' { path, line, sessionId }
   → dsh-file-browser 打开面板并载入该文件
 ```
+
+**地址里的路径是相对的，本包负责还原成绝对路径再发事件。** chat 侧组装地址时
+（`fileAddressFor`）会把**会话工作目录**前缀剥掉，所以工作区里的文件转过来是
+`file/dsh/plugins/README.md` 这种相对写法；而内容插件（文件树）里一切都是绝对路径。
+不还原就会出现"**预览能打开、返回定位却什么都展开不了**"——目录链按相对路径算出来是空的。
+还原用**同一个服务里的同一个 cwd**（`ctx.sessions.list.getSnapshot().byId[id].cwd`），
+是 chat 剥前缀的严格逆运算；**拿不到会话列表时原样透传**（预览照样能读，因为 host 也按
+同一个 cwd 解析），不猜——猜错会把本来读得到的路径变成读不到。
 
 ## 长期风险（要记着）
 
