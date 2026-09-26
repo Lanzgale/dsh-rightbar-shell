@@ -1,0 +1,26 @@
+{
+  "name": "@deepseek-ai/dsh-client-ui-sidebar-right",
+  "version": "0.0.0-local",
+  "description": "本地替身（shim）：占用官方右栏的包名，只补上对话本体硬依赖的 sidebarRight 服务；右栏那一列由 dsh-file-browser 自己渲染。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web"
+    }
+  },
+  "license": "MIT",
+  "files": [
+    "lib",
+    "README.md"
+  ]
+}
