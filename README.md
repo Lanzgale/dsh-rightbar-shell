@@ -27,23 +27,52 @@
 
 ## 谁画什么
 
-本包占住官方那个 `rightbar` 插槽，画**外壳**；内容是别的插件塞进来的。
+本包占住官方那个 `rightbar` 插槽，画**外壳**；内容是别的插件**报到**进来的。
 
-| 座位 | 类型 | 谁往里画 |
-|:--|:--|:--|
-| `rightbar.content` | `single` | 内容插件（`dsh-file-browser`，将来的 `dsh-repo-browser`） |
-| `rightbar.actions` | `list` | 内容插件的工具按钮，落在标题行右端 |
+内容插件在 `apply` 里登记一个**档位**（id / 名字 / 图标 / 内容 / 标题行右端的按钮）：
+
+```js
+ctx.effect(() => ctx.rightbarShell.addMode({
+  id: 'files',
+  label: '文件浏览器',
+  icon: 'folderOpen',
+  render: (props) => react.createElement(ExplorerPanel, props),
+  actions: (props) => react.createElement(Toolbar, props),
+}), 'file-browser: rightbar mode');
+```
+
+`addMode` 返回 disposer；同一个 id 登记两次会**抛错**，不静默覆盖。
 
 外壳自己画这几样：
 
-- **标题行**——左边是「图标 + 当前浏览器名」的切换按钮（`MODES` 表驱动），
-  右端依次是 深浅切换 / 内容插件的工具按钮 / 收起侧边栏
+- **标题行**——左边是「图标 + 当前档位名」的切换菜单，
+  右端依次是 深浅切换 / 当前档位的按钮 / 收起侧边栏
 - **会话标题栏右上角的展开角标**（右栏收起时出现；新会话页不出现）
 - **侧边栏的深浅配色**（`--rb-*` 一组变量，内容插件跟着用）
-- 列的开关与宽度（调 `ctx.layout.openRightbar()` / `closeRightbar()`）
+- 列的开关、宽度与边界拖拽手柄
+
+**档位互斥是结构性的**：外壳只有一个「当前档位」，切档就是换内容，
+不存在两个浏览器同时开着的情况——所以内容插件之间**不需要**互相通知收起
+（旧的两两广播 `dsh:panel:open` 已删除）。
 
 内容插件自带标题行时（例如打开了文档），可以发 `present { headless: true }` 让外壳整行让位，
 永远只有一行。
+
+## 列宽
+
+官方把右栏宽度存在自己的 store 里（`layoutInfo.rightbar`），而 **`ctx.layout` 上没有设置它的方法**。
+偏偏**拖拽手柄的位置也是用这个数算的**（外框里写的是 `left: viewport - normal.rightbar`），
+所以「只把屏幕上那一列改窄」会让手柄飘到离边界几百像素的地方——边界上再也抓不到它。
+
+本包的做法是直接写框架自己那份数：
+
+```js
+ctx.layout.panels.setRightbar(px)   // panels = 构造 LayoutController 时传进去的 instance.actions
+```
+
+- 默认 **350**（官方下限 300、上限视口 ×70%），在展开的那一刻写入；
+- 用户拖动后的宽度存进 `localStorage['dsh-rightbar-shell:width:v2']`，下次展开或刷新复原；
+- 拿不到 `panels.setRightbar` 时会在控制台**大声报警并打出实际字段名**，不静默失效。
 
 ## 事件协议
 
@@ -72,12 +101,16 @@ chat 点文件链接
 - **冒充官方包名**：将来 DSH 若改 `dsh.client` 的声明契约（比如新增必填字段），本包要跟着改。
 - **`sidebarRight` 只有 `openResource` 是真的**：其余成员是空实现。现在全库只有 chat 调它、
   只调这一个方法；将来官方若新增调用者，会拿到一个**静默无效**的空实现（不报错）。
-- **改完要重启 DSH**：模块路径是启动时解析的，光刷新页面不够。
+- **`ctx.layout.panels` 是内部字段**：官方没给「设置右栏宽度」的公开方法，只能伸进
+  `LayoutController.panels` 拿 `setRightbar`。DSH 改了这里，右栏会退回框架默认的 45%，
+  并在控制台留下一条带实际字段名的警告。
+- **改完要重启 DSH**：模块路径（软链 / `package.json` / profile 依赖）是启动时解析的，
+  光刷新页面不够；只改 `lib/client.js` 刷新即可。
 
 ## 文件
 
 | 文件 | 作用 |
 |:--|:--|
 | `lib/index.js` | host 半身，空壳（官方同样是空壳） |
-| `lib/client.js` | 浏览器半身：提供 `sidebarRight`、占 `rightbar`、画外壳 |
+| `lib/client.js` | 浏览器半身：提供 `sidebarRight` 与 `rightbarShell`、占 `rightbar`、画外壳、管列宽 |
 | `package.json` | **包名写的是官方名字**（这就是全部机关） |
