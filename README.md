@@ -49,6 +49,7 @@ ctx.effect(() => ctx.rightbarShell.addMode({
   右端依次是 深浅切换 / 当前档位的按钮 / 收起侧边栏
 - **会话标题栏右上角的展开角标**（右栏收起时出现；新会话页不出现）
 - **侧边栏的深浅配色**（`--rb-*` 一组变量，内容插件跟着用）
+- **全屏时的铺满**（`.dsh-rb.is-fullscreen`，见「全屏」一节）
 - 列的开关、宽度与边界拖拽手柄
 
 **档位互斥是结构性的**：外壳只有一个「当前档位」，切档就是换内容，
@@ -73,6 +74,24 @@ ctx.layout.panels.setRightbar(px)   // panels = 构造 LayoutController 时传�
 - 默认 **350**（官方下限 300、上限视口 ×70%），在展开的那一刻写入；
 - 用户拖动后的宽度存进 `localStorage['dsh-rightbar-shell:width:v2']`，下次展开或刷新复原；
 - 拿不到 `panels.setRightbar` 时会在控制台**大声报警并打出实际字段名**，不静默失效。
+
+## 全屏
+
+**框架不管铺满**。`ctx.layout.openRightbar(track, fullscreen)` 里的 `fullscreen` 只做两件事：
+藏掉拖拽手柄、关掉宽度过渡动画；真正"盖住整个窗口"是**面板自己画的**——官方那套也是自己写
+`position: fixed; inset: 0; z-index: 40`。所以本包除了把状态报给框架，还给根节点挂
+`is-fullscreen`，由 `.dsh-rb.is-fullscreen` 铺满（父级那一列有 `position: relative`
+但没建包含块，fixed 仍相对视口）。
+
+对外接口（内容插件用，目前是文件浏览器的预览工具栏）：
+
+| 成员 | 用途 |
+|:--|:--|
+| `isFullscreen()` | 当前是否全屏 |
+| `setFullscreen(v)` / `toggleFullscreen()` | 切换全屏 |
+| `getSnapshot().fullscreen` + `subscribe` | 订阅全屏状态变化 |
+
+**收起侧边栏会一并退出全屏**（`setOpen(false)` 里复位），否则下次打开会直接糊住整屏。
 
 ## 事件协议
 
