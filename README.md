@@ -36,12 +36,17 @@ ctx.effect(() => ctx.rightbarShell.addMode({
   id: 'files',
   label: '文件浏览器',
   icon: 'folderOpen',
+  order: 1,                       // 菜单里的位置：小的在前；不报 = 100（排最后）
   render: (props) => react.createElement(ExplorerPanel, props),
   actions: (props) => react.createElement(Toolbar, props),
 }), 'file-browser: rightbar mode');
 ```
 
 `addMode` 返回 disposer；同一个 id 登记两次会**抛错**，不静默覆盖。
+
+**菜单顺序由各插件自报，外壳不做自动排序**（不按 id、不按名字、也不看谁先加载）：
+`order` 小的排前面，号相同按报到先后，没报的按 100 排在最后。**默认档位就是顺序第一的那一个**，
+在面板第一次打开、或有人显式切过档之后就固定住（免得某个插件热重载时把用户正在看的档位顶掉）。
 
 外壳自己画这几样：
 
